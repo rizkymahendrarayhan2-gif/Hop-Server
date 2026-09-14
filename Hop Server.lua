@@ -1,6 +1,6 @@
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
 
-local scriptCode = [=[
+local scriptCode = 
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -589,7 +589,7 @@ AutoHopBtn.MouseButton1Click:Connect(TriggerAutoHop)
 
 RefreshList()
 
--- Smart Check setelah tiba di Server Baru
+-- Smart Check
 if getgenv().AUTO_HOP_ACTIVE then
     task.spawn(function()
         Notify("Auto Hop", "Verifying player count...", 3)
@@ -606,6 +606,3 @@ if getgenv().AUTO_HOP_ACTIVE then
         end
     end)
 end
-]=]
-
-loadstring(scriptCode)()
