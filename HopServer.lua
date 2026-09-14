@@ -420,7 +420,17 @@ task.spawn(function()
     end
 end)
 
--- Teleport Logic + Auto Re-queue Script (Improved dengan fallback handling seperti Infinite Yield)
+-- Helper: Get best queue_on_teleport method for current executor
+local function GetQueueMethod()
+    if queue_on_teleport then return queue_on_teleport end
+    if queueonteleport then return queueonteleport end
+    if syn and syn.queue_on_teleport then return syn.queue_on_teleport end
+    if fluxus and fluxus.queue_on_teleport then return fluxus.queue_on_teleport end
+    if getgenv and getgenv().queue_on_teleport then return getgenv().queue_on_teleport end
+    return nil
+end
+
+-- Teleport Logic + Auto Re-queue Script
 local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
     lastAttemptedServerId = serverId
     if joinBtn then
@@ -440,17 +450,18 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
     -- Script URL untuk re-execution
     local SCRIPT_URL = "https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/main/HopServer.lua"
 
-    -- Improved queue_on_teleport implementation (seperti Infinite Yield dengan multiple fallback)
-    if queue_on_teleport then
-        -- Method 1: Direct queue_on_teleport dengan proper error handling
-        pcall(function()
-            queue_on_teleport(function()
-                -- Re-load script setelah teleport dengan multiple fallback attempts
-                local success = false
+    -- Get the queue method dynamically (re-check each time)
+    local queueFunc = GetQueueMethod()
+    
+    if queueFunc then
+        local queueSuccess = pcall(function()
+            queueFunc(function()
+                -- Attempt to reload script with multiple fallbacks
+                local scriptLoaded = false
                 
-                -- Try primary method
-                if not success then
-                    success = pcall(function()
+                -- Try method 1: Direct loadstring with HttpGet
+                if not scriptLoaded then
+                    scriptLoaded = pcall(function()
                         local code = game:HttpGet(SCRIPT_URL)
                         if code and code ~= "" then
                             loadstring(code)()
@@ -458,53 +469,34 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
                     end)
                 end
                 
-                -- Fallback: Try dengan error handling tambahan
-                if not success then
-                    pcall(function()
+                -- Try method 2: Direct loadstring (simpler)
+                if not scriptLoaded then
+                    scriptLoaded = pcall(function()
                         loadstring(game:HttpGet(SCRIPT_URL))()
+                    end)
+                end
+                
+                -- If all fails, at least try to reload GUI
+                if not scriptLoaded then
+                    pcall(function()
+                        -- Just try to get the script again
+                        local tryCode = game:HttpGet(SCRIPT_URL)
+                        if tryCode and tryCode ~= "" then
+                            loadstring(tryCode)()
+                        end
                     end)
                 end
             end)
         end)
+        
+        if not queueSuccess then
+            Notify("Warning", "Queue method failed. Manual re-execute may be needed.", 4)
+        end
     else
-        -- Method 2: Try semua alternative executor methods (syn, fluxus, dll)
-        local queueMethods = {
-            function()
-                if syn and syn.queue_on_teleport then
-                    syn.queue_on_teleport(function()
-                        pcall(function()
-                            loadstring(game:HttpGet(SCRIPT_URL))()
-                        end)
-                    end)
-                    return true
-                end
-            end,
-            function()
-                if fluxus and fluxus.queue_on_teleport then
-                    fluxus.queue_on_teleport(function()
-                        pcall(function()
-                            loadstring(game:HttpGet(SCRIPT_URL))()
-                        end)
-                    end)
-                    return true
-                end
-            end
-        }
-        
-        local methodSucceeded = false
-        for _, method in ipairs(queueMethods) do
-            if pcall(method) then
-                methodSucceeded = true
-                break
-            end
-        end
-        
-        if not methodSucceeded then
-            Notify("Warning", "Auto-exec may not work. Manual re-execute might be needed.", 4)
-        end
+        Notify("Warning", "No queue_on_teleport method found. Manual re-execute needed.", 4)
     end
 
-    local tpSuccess, _ = pcall(function()
+    local tpSuccess, tpErr = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, LocalPlayer)
     end)
 
