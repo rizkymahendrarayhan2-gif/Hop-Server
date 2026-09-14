@@ -429,27 +429,25 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
+    -- Store AUTO_HOP_ACTIVE flag for after teleport
+    if setAutoHopFlag then
+        getgenv().AUTO_HOP_ACTIVE = true
+    else
+        getgenv().AUTO_HOP_ACTIVE = false
+    end
+
     if queue_on_teleport then
         pcall(function()
-            if setAutoHopFlag then
-                getgenv().AUTO_HOP_ACTIVE = true
-            else
-                getgenv().AUTO_HOP_ACTIVE = false
-            end
             queue_on_teleport(function()
-                local HttpService = game:GetService("HttpService")
-                local TeleportService = game:GetService("TeleportService")
-                local Players = game:GetService("Players")
-                
-                if getgenv().AUTO_HOP_ACTIVE then
-                    task.wait(2)
-                    local currentPlayers = #Players:GetPlayers()
-                    if currentPlayers > 3 then
-                        getgenv().AUTO_HOP_ACTIVE = false
-                    end
-                end
+                -- Re-load script setelah teleport
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/main/HopServer.lua"))()
+                end)
             end)
         end)
+    else
+        -- Fallback notification jika queue_on_teleport tidak tersedia
+        Notify("Warning", "Auto-exec not available. Manual re-execute required after teleport.", 4)
     end
 
     local tpSuccess, _ = pcall(function()
@@ -596,7 +594,7 @@ AutoHopBtn.MouseButton1Click:Connect(TriggerAutoHop)
 
 RefreshList()
 
--- Smart Check
+-- Smart Check: Verifikasi player count setelah teleport
 if getgenv().AUTO_HOP_ACTIVE then
     task.spawn(function()
         Notify("Auto Hop", "Verifying player count...", 3)
