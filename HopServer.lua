@@ -1,3 +1,4 @@
+-- Get queue_on_teleport function dengan multiple fallback options (seperti Infinite Yield)
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
 
 local HttpService = game:GetService("HttpService")
@@ -419,7 +420,7 @@ task.spawn(function()
     end
 end)
 
--- Teleport Logic + Auto Re-queue Script
+-- Teleport Logic + Auto Re-queue Script (Improved dengan fallback handling seperti Infinite Yield)
 local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
     lastAttemptedServerId = serverId
     if joinBtn then
@@ -429,25 +430,78 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
-    -- Store AUTO_HOP_ACTIVE flag for after teleport
+    -- Store AUTO_HOP_ACTIVE flag untuk setelah teleport
     if setAutoHopFlag then
         getgenv().AUTO_HOP_ACTIVE = true
     else
         getgenv().AUTO_HOP_ACTIVE = false
     end
 
+    -- Script URL untuk re-execution
+    local SCRIPT_URL = "https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/main/HopServer.lua"
+
+    -- Improved queue_on_teleport implementation (seperti Infinite Yield dengan multiple fallback)
     if queue_on_teleport then
+        -- Method 1: Direct queue_on_teleport dengan proper error handling
         pcall(function()
             queue_on_teleport(function()
-                -- Re-load script setelah teleport
-                pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/main/HopServer.lua"))()
-                end)
+                -- Re-load script setelah teleport dengan multiple fallback attempts
+                local success = false
+                
+                -- Try primary method
+                if not success then
+                    success = pcall(function()
+                        local code = game:HttpGet(SCRIPT_URL)
+                        if code and code ~= "" then
+                            loadstring(code)()
+                        end
+                    end)
+                end
+                
+                -- Fallback: Try dengan error handling tambahan
+                if not success then
+                    pcall(function()
+                        loadstring(game:HttpGet(SCRIPT_URL))()
+                    end)
+                end
             end)
         end)
     else
-        -- Fallback notification jika queue_on_teleport tidak tersedia
-        Notify("Warning", "Auto-exec not available. Manual re-execute required after teleport.", 4)
+        -- Method 2: Try semua alternative executor methods (syn, fluxus, dll)
+        local queueMethods = {
+            function()
+                if syn and syn.queue_on_teleport then
+                    syn.queue_on_teleport(function()
+                        pcall(function()
+                            loadstring(game:HttpGet(SCRIPT_URL))()
+                        end)
+                    end)
+                    return true
+                end
+            end,
+            function()
+                if fluxus and fluxus.queue_on_teleport then
+                    fluxus.queue_on_teleport(function()
+                        pcall(function()
+                            loadstring(game:HttpGet(SCRIPT_URL))()
+                        end)
+                    end)
+                    return true
+                end
+            end
+        }
+        
+        local methodSucceeded = false
+        for _, method in ipairs(queueMethods) do
+            if pcall(method) then
+                methodSucceeded = true
+                break
+            end
+        end
+        
+        if not methodSucceeded then
+            Notify("Warning", "Auto-exec may not work. Manual re-execute might be needed.", 4)
+        end
     end
 
     local tpSuccess, _ = pcall(function()
