@@ -1,6 +1,6 @@
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
 
-local scriptCode = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/refs/heads/main/Hop%20Server.lua"))()
+local scriptCode = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/refs/heads/main/HopServer.lua"))()
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
