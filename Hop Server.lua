@@ -1,6 +1,6 @@
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
 
-local scriptCode = 
+local scriptCode = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/refs/heads/main/Hop%20Server.lua"))()
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -32,7 +32,7 @@ OverlayFrame.Size = UDim2.new(1, 0, 1, 0)
 OverlayFrame.Position = UDim2.new(0, 0, 0, 0)
 OverlayFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 OverlayFrame.BackgroundTransparency = 0.55
-OverlayFrame.Active = true -- Memblokir sentuhan/klik di belakang
+OverlayFrame.Active = true
 OverlayFrame.Visible = false
 OverlayFrame.ZIndex = 1000
 OverlayFrame.Parent = ScreenGui
@@ -42,7 +42,7 @@ local DialogFrame = Instance.new("Frame")
 DialogFrame.Name = "ConfirmDialog"
 DialogFrame.Size = UDim2.new(0, 270, 0, 135)
 DialogFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-DialogFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Tepat di tengah layar utama
+DialogFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 DialogFrame.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
 DialogFrame.BorderSizePixel = 0
 DialogFrame.ZIndex = 1001
