@@ -1,6 +1,5 @@
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
 
-local scriptCode = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/refs/heads/main/HopServer.lua"))()
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -8,11 +7,8 @@ local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Multi-executor Queue Support
-local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
-
--- Target Parent GUI
-local TargetParent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(ScreenGui)) or CoreGui
+-- Target Parent GUI (CoreGui paling aman untuk Delta)
+local TargetParent = CoreGui
 
 if TargetParent:FindFirstChild("ServerFinderGui") then
     TargetParent.ServerFinderGui:Destroy()
@@ -440,7 +436,19 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
             else
                 getgenv().AUTO_HOP_ACTIVE = false
             end
-            queue_on_teleport(scriptCode)
+            queue_on_teleport(function()
+                local HttpService = game:GetService("HttpService")
+                local TeleportService = game:GetService("TeleportService")
+                local Players = game:GetService("Players")
+                
+                if getgenv().AUTO_HOP_ACTIVE then
+                    task.wait(2)
+                    local currentPlayers = #Players:GetPlayers()
+                    if currentPlayers > 3 then
+                        getgenv().AUTO_HOP_ACTIVE = false
+                    end
+                end
+            end)
         end)
     end
 
@@ -471,7 +479,6 @@ local function RenderServers(servers)
     serverCards = {}
 
     if #servers == 0 then
-        -- CoreGui & UI Status sama-sama menampilkan pesan try refresh
         Notify("Server Finder", "No available servers found. Tap Refresh to try again.", 4)
         return
     end
