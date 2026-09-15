@@ -286,9 +286,11 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ContentFrame.Visible = not isMinimized
     if isMinimized then
         MainFrame.Size = UDim2.new(0, 340, 0, 42)
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, -134)
         ToggleBtn.Text = "+"
     else
         MainFrame.Size = UDim2.new(0, 340, 0, 310)
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         ToggleBtn.Text = "-"
     end
 end)
@@ -420,17 +422,7 @@ task.spawn(function()
     end
 end)
 
--- Helper: Get best queue_on_teleport method for current executor
-local function GetQueueMethod()
-    if queue_on_teleport then return queue_on_teleport end
-    if queueonteleport then return queueonteleport end
-    if syn and syn.queue_on_teleport then return syn.queue_on_teleport end
-    if fluxus and fluxus.queue_on_teleport then return fluxus.queue_on_teleport end
-    if getgenv and getgenv().queue_on_teleport then return getgenv().queue_on_teleport end
-    return nil
-end
-
--- Teleport Logic + Auto Re-queue Script
+-- Teleport Logic (WITHOUT Auto Re-queue Script)
 local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
     lastAttemptedServerId = serverId
     if joinBtn then
@@ -439,62 +431,6 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
     end
 
     Notify("Server Finder", "Teleporting to server...", 3)
-
-    -- Store AUTO_HOP_ACTIVE flag untuk setelah teleport
-    if setAutoHopFlag then
-        getgenv().AUTO_HOP_ACTIVE = true
-    else
-        getgenv().AUTO_HOP_ACTIVE = false
-    end
-
-    -- Script URL untuk re-execution
-    local SCRIPT_URL = "https://raw.githubusercontent.com/rizkymahendrarayhan2-gif/Hop-Server/main/HopServer.lua"
-
-    -- Get the queue method dynamically (re-check each time)
-    local queueFunc = GetQueueMethod()
-    
-    if queueFunc then
-        local queueSuccess = pcall(function()
-            queueFunc(function()
-                -- Attempt to reload script with multiple fallbacks
-                local scriptLoaded = false
-                
-                -- Try method 1: Direct loadstring with HttpGet
-                if not scriptLoaded then
-                    scriptLoaded = pcall(function()
-                        local code = game:HttpGet(SCRIPT_URL)
-                        if code and code ~= "" then
-                            loadstring(code)()
-                        end
-                    end)
-                end
-                
-                -- Try method 2: Direct loadstring (simpler)
-                if not scriptLoaded then
-                    scriptLoaded = pcall(function()
-                        loadstring(game:HttpGet(SCRIPT_URL))()
-                    end)
-                end
-                
-                -- If all fails, at least try to reload GUI
-                if not scriptLoaded then
-                    pcall(function()
-                        -- Just try to get the script again
-                        local tryCode = game:HttpGet(SCRIPT_URL)
-                        if tryCode and tryCode ~= "" then
-                            loadstring(tryCode)()
-                        end
-                    end)
-                end
-            end)
-        end)
-        
-        if not queueSuccess then
-            Notify("Warning", "Queue method failed. Manual re-execute may be needed.", 4)
-        end
-    else
-        Notify("Warning", "No queue_on_teleport method found. Manual re-execute needed.", 4)
-    end
 
     local tpSuccess, tpErr = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, LocalPlayer)
@@ -639,21 +575,3 @@ RefreshBtn.MouseButton1Click:Connect(RefreshList)
 AutoHopBtn.MouseButton1Click:Connect(TriggerAutoHop)
 
 RefreshList()
-
--- Smart Check: Verifikasi player count setelah teleport
-if getgenv().AUTO_HOP_ACTIVE then
-    task.spawn(function()
-        Notify("Auto Hop", "Verifying player count...", 3)
-        task.wait(2)
-        
-        local currentPlayers = #Players:GetPlayers()
-        if currentPlayers > MAX_SEPI_THRESHOLD then
-            Notify("Auto Hop", "Server has " .. tostring(currentPlayers) .. " players (Too full). Re-hopping...", 3)
-            task.wait(1)
-            TriggerAutoHop()
-        else
-            getgenv().AUTO_HOP_ACTIVE = false
-            Notify("Auto Hop Success", "Found quiet server! (" .. tostring(currentPlayers) .. " players)", 5)
-        end
-    end)
-end
