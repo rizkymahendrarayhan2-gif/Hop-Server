@@ -8,7 +8,6 @@ local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Target Parent GUI (CoreGui paling aman untuk Delta)
 local TargetParent = CoreGui
 
 if TargetParent:FindFirstChild("ServerFinderGui") then
@@ -227,11 +226,6 @@ local serverCards = {}
 local validServersList = {}
 local statusTimer = nil
 
--- Store position state untuk minimize (Initialize as nil, capture on minimize)
-local savedPosition = nil
-local savedSize = nil
-local isMinimized = false
-
 -- Dual Notification System
 local function Notify(title, message, duration)
     duration = duration or 3
@@ -275,25 +269,24 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ContentFrame.Visible = not isMinimized
     
     if isMinimized then
-        -- Capture the REAL current position before minimizing
-        savedPosition = MainFrame.Position
-        savedSize = MainFrame.Size
-        
-        -- Minimize: keep X position, shift Y up by 134 pixels
+        -- Minimize: ubah ukuran & sesuaikan Y offset dari posisi SEKARANG
         MainFrame.Size = UDim2.new(0, 340, 0, 42)
         MainFrame.Position = UDim2.new(
-            savedPosition.X.Scale, 
-            savedPosition.X.Offset, 
-            savedPosition.Y.Scale, 
-            savedPosition.Y.Offset - 134
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset - 134
         )
         ToggleBtn.Text = "+"
     else
-        -- Restore the saved position exactly
-        if savedPosition and savedSize then
-            MainFrame.Size = savedSize
-            MainFrame.Position = savedPosition
-        end
+        -- Restore: kembalikan ukuran & sesuaikan Y offset dari posisi SEKARANG (termasuk posisi setelah digeser)
+        MainFrame.Size = UDim2.new(0, 340, 0, 310)
+        MainFrame.Position = UDim2.new(
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset + 134
+        )
         ToggleBtn.Text = "-"
     end
 end)
