@@ -227,9 +227,9 @@ local serverCards = {}
 local validServersList = {}
 local statusTimer = nil
 
--- Store position state untuk minimize
-local savedPosition = MainFrame.Position
-local savedSize = MainFrame.Size
+-- Store position state untuk minimize (Initialize as nil, capture on minimize)
+local savedPosition = nil
+local savedSize = nil
 local isMinimized = false
 
 -- Dual Notification System
@@ -273,18 +273,27 @@ end)
 ToggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     ContentFrame.Visible = not isMinimized
+    
     if isMinimized then
-        -- Simpan posisi sebelum minimize
+        -- Capture the REAL current position before minimizing
         savedPosition = MainFrame.Position
         savedSize = MainFrame.Size
         
+        -- Minimize: keep X position, shift Y up by 134 pixels
         MainFrame.Size = UDim2.new(0, 340, 0, 42)
-        MainFrame.Position = UDim2.new(savedPosition.X.Scale, savedPosition.X.Offset, savedPosition.Y.Scale, savedPosition.Y.Offset - 134)
+        MainFrame.Position = UDim2.new(
+            savedPosition.X.Scale, 
+            savedPosition.X.Offset, 
+            savedPosition.Y.Scale, 
+            savedPosition.Y.Offset - 134
+        )
         ToggleBtn.Text = "+"
     else
-        -- Kembalikan posisi yang disimpan
-        MainFrame.Size = savedSize
-        MainFrame.Position = savedPosition
+        -- Restore the saved position exactly
+        if savedPosition and savedSize then
+            MainFrame.Size = savedSize
+            MainFrame.Position = savedPosition
+        end
         ToggleBtn.Text = "-"
     end
 end)
