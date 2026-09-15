@@ -185,21 +185,6 @@ local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 5)
 RefreshCorner.Parent = RefreshBtn
 
--- Auto Hop Button
-local AutoHopBtn = Instance.new("TextButton")
-AutoHopBtn.Size = UDim2.new(0, 65, 0, 26)
-AutoHopBtn.Position = UDim2.new(1, -191, 0.5, -13)
-AutoHopBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
-AutoHopBtn.Text = "Auto Hop"
-AutoHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoHopBtn.Font = Enum.Font.SourceSansBold
-AutoHopBtn.TextSize = 12
-AutoHopBtn.Parent = Header
-
-local AutoHopCorner = Instance.new("UICorner")
-AutoHopCorner.CornerRadius = UDim.new(0, 5)
-AutoHopCorner.Parent = AutoHopBtn
-
 -- Content Frame Container
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
@@ -242,6 +227,11 @@ local serverCards = {}
 local validServersList = {}
 local statusTimer = nil
 
+-- Store position state untuk minimize
+local savedPosition = MainFrame.Position
+local savedSize = MainFrame.Size
+local isMinimized = false
+
 -- Dual Notification System
 local function Notify(title, message, duration)
     duration = duration or 3
@@ -280,26 +270,28 @@ NoBtn.MouseButton1Click:Connect(function()
     OverlayFrame.Visible = false
 end)
 
-local isMinimized = false
 ToggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     ContentFrame.Visible = not isMinimized
     if isMinimized then
+        -- Simpan posisi sebelum minimize
+        savedPosition = MainFrame.Position
+        savedSize = MainFrame.Size
+        
         MainFrame.Size = UDim2.new(0, 340, 0, 42)
-        MainFrame.Position = UDim2.new(0.5, 0, 0.5, -134)
+        MainFrame.Position = UDim2.new(savedPosition.X.Scale, savedPosition.X.Offset, savedPosition.Y.Scale, savedPosition.Y.Offset - 134)
         ToggleBtn.Text = "+"
     else
-        MainFrame.Size = UDim2.new(0, 340, 0, 310)
-        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        -- Kembalikan posisi yang disimpan
+        MainFrame.Size = savedSize
+        MainFrame.Position = savedPosition
         ToggleBtn.Text = "-"
     end
 end)
 
 local lastAttemptedServerId = nil
-local isAutoHopping = false
 local lastFetchTime = 0
 local FETCH_COOLDOWN = 3
-local MAX_SEPI_THRESHOLD = 3
 
 -- Direct Roblox API Fetcher via Executor HTTP Request
 local function CustomRequest(url)
@@ -375,8 +367,6 @@ local function GetProcessedServers()
     return result
 end
 
-local TriggerAutoHop
-
 -- Auto-dismiss Error Popups & Cleanup Dark Background Overlay
 task.spawn(function()
     local robloxPromptGui = CoreGui:FindFirstChild("RobloxPromptGui") or CoreGui:WaitForChild("RobloxPromptGui", 5)
@@ -385,8 +375,10 @@ task.spawn(function()
         if promptOverlay then
             local function handlePrompt(child)
                 if child.Name == "ErrorPrompt" then
-                    child.Visible = false
-                    promptOverlay.Visible = false
+                    -- Jangan set visible false, hapus langsung
+                    pcall(function()
+                        child:Destroy()
+                    end)
                     
                     if lastAttemptedServerId and serverCards[lastAttemptedServerId] then
                         if serverCards[lastAttemptedServerId].Parent then
@@ -395,20 +387,7 @@ task.spawn(function()
                         serverCards[lastAttemptedServerId] = nil
                     end
 
-                    local button = child:FindFirstChild("Button", true)
-                    if button and button:IsA("TextButton") and getconnections then
-                        for _, conn in pairs(getconnections(button.MouseButton1Click)) do
-                            conn:Fire()
-                        end
-                    end
-
-                    if isAutoHopping then
-                        Notify("Teleport Error", "Teleport failed. Trying next server...", 2)
-                        task.wait(0.5)
-                        TriggerAutoHop()
-                    else
-                        Notify("Teleport Error", "Teleport failed. Try another server.", 3)
-                    end
+                    Notify("Teleport Error", "Teleport failed. Try another server.", 2)
                 end
             end
 
@@ -422,8 +401,8 @@ task.spawn(function()
     end
 end)
 
--- Teleport Logic (WITHOUT Auto Re-queue Script)
-local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
+-- Teleport Logic
+local function JoinServer(serverId, joinBtn, frame)
     lastAttemptedServerId = serverId
     if joinBtn then
         joinBtn.Text = "Joining..."
@@ -441,12 +420,7 @@ local function JoinServer(serverId, joinBtn, frame, setAutoHopFlag)
             frame:Destroy()
         end
         serverCards[serverId] = nil
-        
-        if isAutoHopping then
-            Notify("Teleport Error", "Failed to join server. Trying another...", 2)
-            task.wait(0.5)
-            TriggerAutoHop()
-        end
+        Notify("Teleport Error", "Failed to join server. Try another.", 2)
     end
 end
 
@@ -520,8 +494,7 @@ local function RenderServers(servers)
         serverCards[server.id] = ItemFrame
 
         JoinBtn.MouseButton1Click:Connect(function()
-            isAutoHopping = false
-            JoinServer(server.id, JoinBtn, ItemFrame, false)
+            JoinServer(server.id, JoinBtn, ItemFrame)
         end)
     end
 end
@@ -548,30 +521,6 @@ local function RefreshList()
     end)
 end
 
-TriggerAutoHop = function()
-    isAutoHopping = true
-    AutoHopBtn.Text = "Hopping..."
-    AutoHopBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-    Notify("Auto Hop", "Searching for lowest player server...", 3)
-
-    task.spawn(function()
-        if #validServersList == 0 then
-            validServersList = GetProcessedServers()
-        end
-
-        if #validServersList > 0 then
-            local targetServer = table.remove(validServersList, 1)
-            JoinServer(targetServer.id, nil, nil, true)
-        else
-            Notify("Auto Hop", "No available servers found. Tap Refresh to try again.", 4)
-            AutoHopBtn.Text = "Auto Hop"
-            AutoHopBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
-            isAutoHopping = false
-        end
-    end)
-end
-
 RefreshBtn.MouseButton1Click:Connect(RefreshList)
-AutoHopBtn.MouseButton1Click:Connect(TriggerAutoHop)
 
 RefreshList()
