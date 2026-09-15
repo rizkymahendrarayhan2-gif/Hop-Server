@@ -226,6 +226,8 @@ local serverCards = {}
 local validServersList = {}
 local statusTimer = nil
 
+local isMinimized = false
+
 -- Dual Notification System
 local function Notify(title, message, duration)
     duration = duration or 3
