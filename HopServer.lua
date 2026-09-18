@@ -95,7 +95,7 @@ NoCorner.Parent = NoBtn
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 310)
+MainFrame.Size = UDim2.new(0, 380, 0, 310)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
@@ -164,9 +164,10 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 4)
 ToggleCorner.Parent = ToggleBtn
 
+-- Refresh Button
 local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(0, 55, 0, 26)
-RefreshBtn.Position = UDim2.new(1, -118, 0.5, -13)
+RefreshBtn.Size = UDim2.new(0, 75, 0, 26)
+RefreshBtn.Position = UDim2.new(1, -138, 0.5, -13)
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
 RefreshBtn.Text = "Refresh"
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -180,7 +181,7 @@ RefreshCorner.Parent = RefreshBtn
 
 local AutoHopBtn = Instance.new("TextButton")
 AutoHopBtn.Size = UDim2.new(0, 60, 0, 26)
-AutoHopBtn.Position = UDim2.new(1, -183, 0.5, -13)
+AutoHopBtn.Position = UDim2.new(1, -203, 0.5, -13)
 AutoHopBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 AutoHopBtn.Text = "Auto Hop"
 AutoHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -235,6 +236,10 @@ local validServersList = {}
 local visitedServers = {}
 local statusTimer = nil
 local isMinimized = false
+local isRefreshing = false
+
+local FETCH_COOLDOWN = 3
+local lastFetchTime = 0
 
 local function Notify(title, message, duration)
     duration = duration or 3
@@ -278,7 +283,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ContentFrame.Visible = not isMinimized
     
     if isMinimized then
-        MainFrame.Size = UDim2.new(0, 360, 0, 42)
+        MainFrame.Size = UDim2.new(0, 380, 0, 42)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
             MainFrame.Position.X.Offset, 
@@ -287,7 +292,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
         )
         ToggleBtn.Text = "+"
     else
-        MainFrame.Size = UDim2.new(0, 360, 0, 310)
+        MainFrame.Size = UDim2.new(0, 380, 0, 310)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
             MainFrame.Position.X.Offset, 
@@ -297,10 +302,6 @@ ToggleBtn.MouseButton1Click:Connect(function()
         ToggleBtn.Text = "-"
     end
 end)
-
-local lastAttemptedServerId = nil
-local lastFetchTime = 0
-local FETCH_COOLDOWN = 3
 
 local function CustomRequest(url)
     local bodyText = nil
@@ -353,13 +354,12 @@ local function FetchServersPage(cursor)
         if decoded and decoded.data and #decoded.data > 0 then
             return decoded
         end
-        task.wait(0.1)
     end
     return nil
 end
 
 local function GetProcessedServers(maxPages)
-    maxPages = maxPages or 10
+    maxPages = maxPages or 6
     local result = {}
     local cursor = nil
 
@@ -378,7 +378,6 @@ local function GetProcessedServers(maxPages)
 
         cursor = response.nextPageCursor
         if not cursor or cursor == "" then break end
-        task.wait(0.15)
     end
 
     table.sort(result, function(a, b)
@@ -389,7 +388,6 @@ local function GetProcessedServers(maxPages)
 end
 
 local function JoinServer(serverId, joinBtn, frame)
-    lastAttemptedServerId = serverId
     visitedServers[serverId] = true
 
     if joinBtn then
@@ -421,7 +419,7 @@ local function RenderServers(servers)
     serverCards = {}
 
     if #servers == 0 then
-        Notify("Server Finder", "No available low-player servers found. Refreshing...", 3)
+        Notify("Server Finder", "No available servers found. Tap Refresh to try again.", 3)
         return
     end
 
@@ -488,36 +486,43 @@ local function RenderServers(servers)
 end
 
 local function RefreshList()
+    if isRefreshing then return end
+    
     local now = tick()
-    if now - lastFetchTime < FETCH_COOLDOWN then
-        local remaining = math.ceil(FETCH_COOLDOWN - (now - lastFetchTime))
-        Notify("Server Finder", "Wait " .. tostring(remaining) .. "s before refreshing again...", 2)
-        return
-    end
+    if now - lastFetchTime < FETCH_COOLDOWN then return end
 
+    isRefreshing = true
     lastFetchTime = tick()
-    RefreshBtn.Text = "..."
-    Notify("Server Finder", "Scanning multiple server pages...", 2)
+    RefreshBtn.Text = "Scanning..."
+    Notify("Server Finder", "Fast scanning 6 pages (~600 servers)...", 2)
 
     task.spawn(function()
-        validServersList = GetProcessedServers(4)
+        validServersList = GetProcessedServers(6)
         RenderServers(validServersList)
-        RefreshBtn.Text = "Refresh"
+        
         if #validServersList > 0 then
             Notify("Server Finder", "Found " .. tostring(#validServersList) .. " low-player servers!", 2)
         end
+
+        for i = FETCH_COOLDOWN, 1, -1 do
+            RefreshBtn.Text = "Wait (" .. tostring(i) .. "s)"
+            task.wait(1)
+        end
+        
+        RefreshBtn.Text = "Refresh"
+        isRefreshing = false
     end)
 end
 
 local function AutoHop()
     Notify("Auto Hop", "Searching lowest player server...", 2)
     task.spawn(function()
-        local servers = GetProcessedServers(4)
+        local servers = GetProcessedServers(6)
         if #servers > 0 then
             local targetServer = servers[1]
             JoinServer(targetServer.id)
         else
-            Notify("Auto Hop", "No low player server found. Retrying...", 3)
+            Notify("Auto Hop", "No low player server found.", 3)
         end
     end)
 end
