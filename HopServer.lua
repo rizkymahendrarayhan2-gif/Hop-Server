@@ -1,6 +1,3 @@
--- Get queue_on_teleport function dengan multiple fallback options (seperti Infinite Yield)
-local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
-
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -271,7 +268,6 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ContentFrame.Visible = not isMinimized
     
     if isMinimized then
-        -- Minimize: ubah ukuran & sesuaikan Y offset dari posisi SEKARANG
         MainFrame.Size = UDim2.new(0, 340, 0, 42)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
@@ -281,7 +277,6 @@ ToggleBtn.MouseButton1Click:Connect(function()
         )
         ToggleBtn.Text = "+"
     else
-        -- Restore: kembalikan ukuran & sesuaikan Y offset dari posisi SEKARANG (termasuk posisi setelah digeser)
         MainFrame.Size = UDim2.new(0, 340, 0, 310)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
@@ -379,7 +374,6 @@ task.spawn(function()
         if promptOverlay then
             local function handlePrompt(child)
                 if child.Name == "ErrorPrompt" then
-                    -- Jangan set visible false, hapus langsung
                     pcall(function()
                         child:Destroy()
                     end)
