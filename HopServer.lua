@@ -359,7 +359,7 @@ local function FetchServersPage(cursor)
 end
 
 local function GetProcessedServers(maxPages)
-    maxPages = maxPages or 4
+    maxPages = maxPages or 10
     local result = {}
     local cursor = nil
 
