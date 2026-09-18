@@ -11,14 +11,14 @@ if TargetParent:FindFirstChild("ServerFinderGui") then
     TargetParent.ServerFinderGui:Destroy()
 end
 
--- ScreenGui Main (With IgnoreGuiInset for Full Device Coverage)
+-- ScreenGui Main
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ServerFinderGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = TargetParent
 
--- Full Screen Dark Overlay (Full coverage across notches & status bars)
+-- Dark Overlay
 local OverlayFrame = Instance.new("Frame")
 OverlayFrame.Name = "OverlayFrame"
 OverlayFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -30,7 +30,7 @@ OverlayFrame.Visible = false
 OverlayFrame.ZIndex = 1000
 OverlayFrame.Parent = ScreenGui
 
--- Independent Centered Dialog Frame (Always centered on screen regardless of MainFrame state)
+-- Dialog Frame
 local DialogFrame = Instance.new("Frame")
 DialogFrame.Name = "ConfirmDialog"
 DialogFrame.Size = UDim2.new(0, 270, 0, 135)
@@ -92,10 +92,10 @@ local NoCorner = Instance.new("UICorner")
 NoCorner.CornerRadius = UDim.new(0, 5)
 NoCorner.Parent = NoBtn
 
--- Main Frame (Compact, Centered & Draggable)
+-- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 310)
+MainFrame.Size = UDim2.new(0, 360, 0, 310)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
@@ -136,7 +136,6 @@ Title.Font = Enum.Font.SourceSansBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
 
--- Close Button (X)
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 24, 0, 24)
 CloseBtn.Position = UDim2.new(1, -30, 0.5, -12)
@@ -151,7 +150,6 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
--- Minimize Button (-)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 24, 0, 24)
 ToggleBtn.Position = UDim2.new(1, -58, 0.5, -12)
@@ -166,20 +164,33 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 4)
 ToggleCorner.Parent = ToggleBtn
 
--- Refresh Button
 local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(0, 60, 0, 26)
-RefreshBtn.Position = UDim2.new(1, -122, 0.5, -13)
+RefreshBtn.Size = UDim2.new(0, 55, 0, 26)
+RefreshBtn.Position = UDim2.new(1, -118, 0.5, -13)
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
 RefreshBtn.Text = "Refresh"
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RefreshBtn.Font = Enum.Font.SourceSansBold
-RefreshBtn.TextSize = 12
+RefreshBtn.TextSize = 11
 RefreshBtn.Parent = Header
 
 local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 5)
 RefreshCorner.Parent = RefreshBtn
+
+local AutoHopBtn = Instance.new("TextButton")
+AutoHopBtn.Size = UDim2.new(0, 60, 0, 26)
+AutoHopBtn.Position = UDim2.new(1, -183, 0.5, -13)
+AutoHopBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+AutoHopBtn.Text = "Auto Hop"
+AutoHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoHopBtn.Font = Enum.Font.SourceSansBold
+AutoHopBtn.TextSize = 11
+AutoHopBtn.Parent = Header
+
+local AutoHopCorner = Instance.new("UICorner")
+AutoHopCorner.CornerRadius = UDim.new(0, 5)
+AutoHopCorner.Parent = AutoHopBtn
 
 -- Content Frame Container
 local ContentFrame = Instance.new("Frame")
@@ -221,11 +232,10 @@ StatusLabel.Parent = ScrollFrame
 
 local serverCards = {}
 local validServersList = {}
+local visitedServers = {}
 local statusTimer = nil
-
 local isMinimized = false
 
--- Dual Notification System
 local function Notify(title, message, duration)
     duration = duration or 3
     StatusLabel.Visible = true
@@ -268,7 +278,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ContentFrame.Visible = not isMinimized
     
     if isMinimized then
-        MainFrame.Size = UDim2.new(0, 340, 0, 42)
+        MainFrame.Size = UDim2.new(0, 360, 0, 42)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
             MainFrame.Position.X.Offset, 
@@ -277,7 +287,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
         )
         ToggleBtn.Text = "+"
     else
-        MainFrame.Size = UDim2.new(0, 340, 0, 310)
+        MainFrame.Size = UDim2.new(0, 360, 0, 310)
         MainFrame.Position = UDim2.new(
             MainFrame.Position.X.Scale, 
             MainFrame.Position.X.Offset, 
@@ -292,7 +302,6 @@ local lastAttemptedServerId = nil
 local lastFetchTime = 0
 local FETCH_COOLDOWN = 3
 
--- Direct Roblox API Fetcher via Executor HTTP Request
 local function CustomRequest(url)
     local bodyText = nil
     local reqFunc = (syn and syn.request) or http_request or request or (http and http.request)
@@ -321,42 +330,55 @@ local function CustomRequest(url)
     if bodyText and bodyText ~= "" then
         local jsonOk, decoded = pcall(function() return HttpService:JSONDecode(bodyText) end)
         if jsonOk and decoded and decoded.data then
-            return decoded.data
+            return decoded
         end
     end
     return nil
 end
 
-local function FetchServers()
+local function FetchServersPage(cursor)
     local placeId = game.PlaceId
+    local query = "?sortOrder=Asc&limit=100"
+    if cursor and cursor ~= "" then
+        query = query .. "&cursor=" .. cursor
+    end
+
     local apiEndpoints = {
-        "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100",
-        "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100",
-        "https://games.roproxy.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100",
-        "https://games.roproxy.com/v1/games/" .. placeId .. "/servers/Public?limit=100"
+        "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public" .. query,
+        "https://games.roproxy.com/v1/games/" .. placeId .. "/servers/Public" .. query
     }
 
     for _, url in ipairs(apiEndpoints) do
-        local data = CustomRequest(url)
-        if data and #data > 0 then
-            return data
+        local decoded = CustomRequest(url)
+        if decoded and decoded.data and #decoded.data > 0 then
+            return decoded
         end
-        task.wait(0.2)
+        task.wait(0.1)
     end
-    return {}
+    return nil
 end
 
-local function GetProcessedServers()
-    local rawServers = FetchServers()
+local function GetProcessedServers(maxPages)
+    maxPages = maxPages or 4
     local result = {}
+    local cursor = nil
 
-    for _, s in ipairs(rawServers) do
-        local playingCount = s.playing or s.players or 0
-        local maxCapacity = s.maxPlayers or 12
-        
-        if playingCount >= 1 and playingCount < maxCapacity and s.id ~= game.JobId then
-            table.insert(result, s)
+    for page = 1, maxPages do
+        local response = FetchServersPage(cursor)
+        if not response or not response.data then break end
+
+        for _, s in ipairs(response.data) do
+            local playingCount = s.playing or s.players or 0
+            local maxCapacity = s.maxPlayers or 12
+            
+            if playingCount >= 1 and playingCount < maxCapacity and s.id ~= game.JobId and not visitedServers[s.id] then
+                table.insert(result, s)
+            end
         end
+
+        cursor = response.nextPageCursor
+        if not cursor or cursor == "" then break end
+        task.wait(0.15)
     end
 
     table.sort(result, function(a, b)
@@ -366,7 +388,6 @@ local function GetProcessedServers()
     return result
 end
 
--- Auto-dismiss Error Popups & Cleanup Dark Background Overlay
 task.spawn(function()
     local robloxPromptGui = CoreGui:FindFirstChild("RobloxPromptGui") or CoreGui:WaitForChild("RobloxPromptGui", 5)
     if robloxPromptGui then
@@ -378,14 +399,15 @@ task.spawn(function()
                         child:Destroy()
                     end)
                     
-                    if lastAttemptedServerId and serverCards[lastAttemptedServerId] then
-                        if serverCards[lastAttemptedServerId].Parent then
+                    if lastAttemptedServerId then
+                        visitedServers[lastAttemptedServerId] = true
+                        if serverCards[lastAttemptedServerId] and serverCards[lastAttemptedServerId].Parent then
                             serverCards[lastAttemptedServerId]:Destroy()
                         end
                         serverCards[lastAttemptedServerId] = nil
                     end
 
-                    Notify("Teleport Error", "Teleport failed. Try another server.", 2)
+                    Notify("Teleport Error", "Teleport failed/full. Trying next...", 2)
                 end
             end
 
@@ -399,9 +421,10 @@ task.spawn(function()
     end
 end)
 
--- Teleport Logic
 local function JoinServer(serverId, joinBtn, frame)
     lastAttemptedServerId = serverId
+    visitedServers[serverId] = true
+
     if joinBtn then
         joinBtn.Text = "Joining..."
         joinBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
@@ -431,7 +454,7 @@ local function RenderServers(servers)
     serverCards = {}
 
     if #servers == 0 then
-        Notify("Server Finder", "No available servers found. Tap Refresh to try again.", 4)
+        Notify("Server Finder", "No available low-player servers found. Refreshing...", 3)
         return
     end
 
@@ -507,18 +530,32 @@ local function RefreshList()
 
     lastFetchTime = tick()
     RefreshBtn.Text = "..."
-    Notify("Server Finder", "Fetching server data...", 2)
+    Notify("Server Finder", "Scanning multiple server pages...", 2)
 
     task.spawn(function()
-        validServersList = GetProcessedServers()
+        validServersList = GetProcessedServers(4)
         RenderServers(validServersList)
         RefreshBtn.Text = "Refresh"
         if #validServersList > 0 then
-            Notify("Server Finder", "Done fetching server data!", 2)
+            Notify("Server Finder", "Found " .. tostring(#validServersList) .. " low-player servers!", 2)
+        end
+    end)
+end
+
+local function AutoHop()
+    Notify("Auto Hop", "Searching lowest player server...", 2)
+    task.spawn(function()
+        local servers = GetProcessedServers(4)
+        if #servers > 0 then
+            local targetServer = servers[1]
+            JoinServer(targetServer.id)
+        else
+            Notify("Auto Hop", "No low player server found. Retrying...", 3)
         end
     end)
 end
 
 RefreshBtn.MouseButton1Click:Connect(RefreshList)
+AutoHopBtn.MouseButton1Click:Connect(AutoHop)
 
 RefreshList()
