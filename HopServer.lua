@@ -388,39 +388,6 @@ local function GetProcessedServers(maxPages)
     return result
 end
 
-task.spawn(function()
-    local robloxPromptGui = CoreGui:FindFirstChild("RobloxPromptGui") or CoreGui:WaitForChild("RobloxPromptGui", 5)
-    if robloxPromptGui then
-        local promptOverlay = robloxPromptGui:FindFirstChild("promptOverlay")
-        if promptOverlay then
-            local function handlePrompt(child)
-                if child.Name == "ErrorPrompt" then
-                    pcall(function()
-                        child:Destroy()
-                    end)
-                    
-                    if lastAttemptedServerId then
-                        visitedServers[lastAttemptedServerId] = true
-                        if serverCards[lastAttemptedServerId] and serverCards[lastAttemptedServerId].Parent then
-                            serverCards[lastAttemptedServerId]:Destroy()
-                        end
-                        serverCards[lastAttemptedServerId] = nil
-                    end
-
-                    Notify("Teleport Error", "Teleport failed/full. Trying next...", 2)
-                end
-            end
-
-            promptOverlay.ChildAdded:Connect(handlePrompt)
-            for _, child in ipairs(promptOverlay:GetChildren()) do
-                if child.Name == "ErrorPrompt" then
-                    handlePrompt(child)
-                end
-            end
-        end
-    end
-end)
-
 local function JoinServer(serverId, joinBtn, frame)
     lastAttemptedServerId = serverId
     visitedServers[serverId] = true
