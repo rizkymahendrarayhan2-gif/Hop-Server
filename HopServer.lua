@@ -358,6 +358,9 @@ local function FetchServersPage(cursor)
     return nil
 end
 
+-- Signal listener to handle teleport failure (Error 771, 772, etc.)
+local teleportFailedConnection = nil
+
 local function GetProcessedServers(maxPages)
     maxPages = maxPages or 6
     local result = {}
@@ -371,7 +374,9 @@ local function GetProcessedServers(maxPages)
             local playingCount = s.playing or s.players or 0
             local maxCapacity = s.maxPlayers or 12
             
-            if playingCount >= 1 and playingCount < maxCapacity and s.id ~= game.JobId and not visitedServers[s.id] then
+            -- Leave at least 1 slot free to prevent Error 772 (Server Full)
+            -- Filter out visited servers and current server
+            if playingCount >= 1 and playingCount <= (maxCapacity - 2) and s.id ~= game.JobId and not visitedServers[s.id] then
                 table.insert(result, s)
             end
         end
@@ -380,6 +385,7 @@ local function GetProcessedServers(maxPages)
         if not cursor or cursor == "" then break end
     end
 
+    -- Sort by lowest player count first
     table.sort(result, function(a, b)
         return (a.playing or 0) < (b.playing or 0)
     end)
@@ -397,16 +403,41 @@ local function JoinServer(serverId, joinBtn, frame)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
+    -- Disconnect old connection if exists
+    if teleportFailedConnection then
+        teleportFailedConnection:Disconnect()
+    end
+
+    -- Listen for asynchronous teleport errors (Error 771 / 772 handling)
+    teleportFailedConnection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+        if player == LocalPlayer then
+            Notify("Teleport Failed", "Unable to join (" .. tostring(teleportResult.Name) .. "). Try another.", 3)
+            
+            if joinBtn and joinBtn.Parent then
+                joinBtn.Text = "Failed"
+                joinBtn.BackgroundColor3 = Color3.fromRGB(217, 83, 79)
+                
+                -- Reset button back to Join after short delay
+                task.delay(1.5, function()
+                    if joinBtn and joinBtn.Parent then
+                        joinBtn.Text = "Join"
+                        joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+                    end
+                end)
+            end
+        end
+    end)
+
     local tpSuccess, tpErr = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, LocalPlayer)
     end)
 
     if not tpSuccess then
-        if frame and frame.Parent then
-            frame:Destroy()
+        if joinBtn and joinBtn.Parent then
+            joinBtn.Text = "Join"
+            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
         end
-        serverCards[serverId] = nil
-        Notify("Teleport Error", "Failed to join server. Try another.", 2)
+        Notify("Teleport Error", "Failed to initiate teleport. Try another.", 2)
     end
 end
 
