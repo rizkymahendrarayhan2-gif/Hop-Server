@@ -171,9 +171,6 @@ local ListLayout = Instance.new("UIListLayout")
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ListLayout.Parent = DropdownList
 
-ContentFrame.Position = UDim2.new(0, 0, 0, 78)
-ContentFrame.Size = UDim2.new(1, 0, 1, -78)
-
 DropdownBtn.MouseButton1Click:Connect(function()
     DropdownList.Visible = not DropdownList.Visible
 end)
@@ -284,8 +281,8 @@ AutoHopCorner.Parent = AutoHopBtn
 -- Content Frame Container
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, 0, 1, -42)
-ContentFrame.Position = UDim2.new(0, 0, 0, 42)
+ContentFrame.Size = UDim2.new(1, 0, 1, -78)
+ContentFrame.Position = UDim2.new(0, 0, 0, 78)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
