@@ -374,9 +374,11 @@ local function GetProcessedServers(maxPages)
             local playingCount = s.playing or s.players or 0
             local maxCapacity = s.maxPlayers or 12
             
-            -- Leave at least 1 slot free to prevent Error 772 (Server Full)
-            -- Filter out visited servers and current server
-            if playingCount >= 1 and playingCount <= (maxCapacity - 2) and s.id ~= game.JobId and not visitedServers[s.id] then
+            -- Filter ketat: Hindari server 0 pemain (mencegah Error 771)
+            -- dan wajib memiliki minimal 2-3 slot kosong (mencegah Error 772)
+            local safeMaxPlayers = math.max(1, maxCapacity - 2)
+            
+            if playingCount >= 1 and playingCount <= safeMaxPlayers and s.id ~= game.JobId and not visitedServers[s.id] then
                 table.insert(result, s)
             end
         end
@@ -385,7 +387,7 @@ local function GetProcessedServers(maxPages)
         if not cursor or cursor == "" then break end
     end
 
-    -- Sort by lowest player count first
+    -- Tetap urutkan dari pemain paling sedikit ke paling banyak
     table.sort(result, function(a, b)
         return (a.playing or 0) < (b.playing or 0)
     end)
@@ -394,6 +396,7 @@ local function GetProcessedServers(maxPages)
 end
 
 local function JoinServer(serverId, joinBtn, frame)
+    if visitedServers[serverId] then return end
     visitedServers[serverId] = true
 
     if joinBtn then
@@ -403,28 +406,11 @@ local function JoinServer(serverId, joinBtn, frame)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
-    -- Disconnect old connection if exists
-    if teleportFailedConnection then
-        teleportFailedConnection:Disconnect()
-    end
-
-    -- Listen for asynchronous teleport errors (Error 771 / 772 handling)
-    teleportFailedConnection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
-        if player == LocalPlayer then
-            Notify("Teleport Failed", "Unable to join (" .. tostring(teleportResult.Name) .. "). Try another.", 3)
-            
-            if joinBtn and joinBtn.Parent then
-                joinBtn.Text = "Failed"
-                joinBtn.BackgroundColor3 = Color3.fromRGB(217, 83, 79)
-                
-                -- Reset button back to Join after short delay
-                task.delay(1.5, function()
-                    if joinBtn and joinBtn.Parent then
-                        joinBtn.Text = "Join"
-                        joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-                    end
-                end)
-            end
+    -- Timeout 6 detik: Mengembalikan tombol ke "Join" jika gagal/stuck tanpa memicu rejoin
+    task.delay(6, function()
+        if joinBtn and joinBtn.Parent and joinBtn.Text == "Joining..." then
+            joinBtn.Text = "Join"
+            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
         end
     end)
 
