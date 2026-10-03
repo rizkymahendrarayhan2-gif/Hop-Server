@@ -358,9 +358,6 @@ local function FetchServersPage(cursor)
     return nil
 end
 
--- Signal listener to handle teleport failure (Error 771, 772, etc.)
-local teleportFailedConnection = nil
-
 local function GetProcessedServers(maxPages)
     maxPages = maxPages or 6
     local result = {}
@@ -374,8 +371,6 @@ local function GetProcessedServers(maxPages)
             local playingCount = s.playing or s.players or 0
             local maxCapacity = s.maxPlayers or 12
             
-            -- Filter ketat: Hindari server 0 pemain (mencegah Error 771)
-            -- dan wajib memiliki minimal 2-3 slot kosong (mencegah Error 772)
             local safeMaxPlayers = math.max(1, maxCapacity - 2)
             
             if playingCount >= 1 and playingCount <= safeMaxPlayers and s.id ~= game.JobId and not visitedServers[s.id] then
@@ -387,7 +382,6 @@ local function GetProcessedServers(maxPages)
         if not cursor or cursor == "" then break end
     end
 
-    -- Tetap urutkan dari pemain paling sedikit ke paling banyak
     table.sort(result, function(a, b)
         return (a.playing or 0) < (b.playing or 0)
     end)
@@ -406,7 +400,6 @@ local function JoinServer(serverId, joinBtn, frame)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
-    -- Timeout 6 detik: Mengembalikan tombol ke "Join" jika gagal/stuck tanpa memicu rejoin
     task.delay(6, function()
         if joinBtn and joinBtn.Parent and joinBtn.Text == "Joining..." then
             joinBtn.Text = "Join"
