@@ -114,91 +114,6 @@ MainStroke.Color = Color3.fromRGB(45, 45, 58)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Hop Server Mode State
-local currentMode = "Least Player"
-local modes = {"Least Player", "Low Ping", "New Server"}
-
--- Mode Frame Container
-local ModeFrame = Instance.new("Frame")
-ModeFrame.Name = "ModeFrame"
-ModeFrame.Size = UDim2.new(1, -16, 0, 26)
-ModeFrame.Position = UDim2.new(0, 8, 0, 46)
-ModeFrame.BackgroundTransparency = 1
-ModeFrame.ZIndex = 10
-ModeFrame.Parent = MainFrame
-
-local ModeLabel = Instance.new("TextLabel")
-ModeLabel.Size = UDim2.new(0, 110, 1, 0)
-ModeLabel.BackgroundTransparency = 1
-ModeLabel.Text = "Hop Server Mode:"
-ModeLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-ModeLabel.Font = Enum.Font.SourceSansBold
-ModeLabel.TextSize = 12
-ModeLabel.TextXAlignment = Enum.TextXAlignment.Left
-ModeLabel.ZIndex = 10
-ModeLabel.Parent = ModeFrame
-
-local DropdownBtn = Instance.new("TextButton")
-DropdownBtn.Size = UDim2.new(1, -115, 1, 0)
-DropdownBtn.Position = UDim2.new(0, 115, 0, 0)
-DropdownBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
-DropdownBtn.Text = currentMode .. "  ▼"
-DropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DropdownBtn.Font = Enum.Font.SourceSansBold
-DropdownBtn.TextSize = 12
-DropdownBtn.ZIndex = 10
-DropdownBtn.Parent = ModeFrame
-
-local DropdownCorner = Instance.new("UICorner")
-DropdownCorner.CornerRadius = UDim.new(0, 5)
-DropdownCorner.Parent = DropdownBtn
-
-local DropdownList = Instance.new("Frame")
-DropdownList.Name = "DropdownList"
-DropdownList.Size = UDim2.new(1, -115, 0, #modes * 26)
-DropdownList.Position = UDim2.new(0, 115, 1, 4)
-DropdownList.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-DropdownList.BorderSizePixel = 0
-DropdownList.Visible = false
-DropdownList.ZIndex = 100
-DropdownList.Parent = ModeFrame
-
-local ListCorner = Instance.new("UICorner")
-ListCorner.CornerRadius = UDim.new(0, 5)
-ListCorner.Parent = DropdownList
-
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Parent = DropdownList
-
-DropdownBtn.MouseButton1Click:Connect(function()
-    DropdownList.Visible = not DropdownList.Visible
-end)
-
-for i, modeName in ipairs(modes) do
-    local OptionBtn = Instance.new("TextButton")
-    OptionBtn.Size = UDim2.new(1, 0, 0, 26)
-    OptionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-    OptionBtn.BackgroundTransparency = 0.1
-    OptionBtn.Text = modeName
-    OptionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-    OptionBtn.Font = Enum.Font.SourceSans
-    OptionBtn.TextSize = 12
-    OptionBtn.LayoutOrder = i
-    OptionBtn.ZIndex = 101
-    OptionBtn.Parent = DropdownList
-
-    OptionBtn.MouseButton1Click:Connect(function()
-        currentMode = modeName
-        DropdownBtn.Text = currentMode .. "  ▼"
-        DropdownList.Visible = false
-        
-        if RefreshList then
-            RefreshList()
-        end
-    end)
-end
-
 -- Header Frame
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 42)
@@ -281,10 +196,107 @@ AutoHopCorner.Parent = AutoHopBtn
 -- Content Frame Container
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, 0, 1, -78)
-ContentFrame.Position = UDim2.new(0, 0, 0, 78)
+ContentFrame.Size = UDim2.new(1, 0, 1, -42)
+ContentFrame.Position = UDim2.new(0, 0, 0, 42)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
+
+-- Hop Server Mode State
+local currentMode = "Least Player"
+local modes = {"Least Player", "Low Ping", "New Server"}
+
+-- Mode Frame Container
+local ModeFrame = Instance.new("Frame")
+ModeFrame.Name = "ModeFrame"
+ModeFrame.Size = UDim2.new(1, -16, 0, 26)
+ModeFrame.Position = UDim2.new(0, 8, 0, 4)
+ModeFrame.BackgroundTransparency = 1
+ModeFrame.ZIndex = 10
+ModeFrame.Parent = ContentFrame
+
+local ModeLabel = Instance.new("TextLabel")
+ModeLabel.Size = UDim2.new(0, 110, 1, 0)
+ModeLabel.BackgroundTransparency = 1
+ModeLabel.Text = "Hop Server Mode:"
+ModeLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+ModeLabel.Font = Enum.Font.SourceSansBold
+ModeLabel.TextSize = 12
+ModeLabel.TextXAlignment = Enum.TextXAlignment.Left
+ModeLabel.ZIndex = 10
+ModeLabel.Parent = ModeFrame
+
+local DropdownBtn = Instance.new("TextButton")
+DropdownBtn.Size = UDim2.new(1, -115, 1, 0)
+DropdownBtn.Position = UDim2.new(0, 115, 0, 0)
+DropdownBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+DropdownBtn.Text = currentMode .. "  ►"
+DropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DropdownBtn.Font = Enum.Font.SourceSansBold
+DropdownBtn.TextSize = 12
+DropdownBtn.ZIndex = 10
+DropdownBtn.Parent = ModeFrame
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = UDim.new(0, 5)
+DropdownCorner.Parent = DropdownBtn
+
+local DropdownList = Instance.new("Frame")
+DropdownList.Name = "DropdownList"
+DropdownList.Size = UDim2.new(1, -115, 0, #modes * 26)
+DropdownList.Position = UDim2.new(0, 115, 1, 4)
+DropdownList.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+DropdownList.BorderSizePixel = 0
+DropdownList.Visible = false
+DropdownList.ZIndex = 100
+DropdownList.Parent = ModeFrame
+
+local ListCorner = Instance.new("UICorner")
+ListCorner.CornerRadius = UDim.new(0, 5)
+ListCorner.Parent = DropdownList
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Parent = DropdownList
+
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -16, 1, -38)
+ScrollFrame.Position = UDim2.new(0, 8, 0, 34)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.Parent = ContentFrame
+
+DropdownBtn.MouseButton1Click:Connect(function()
+    local willBeOpen = not DropdownList.Visible
+    DropdownList.Visible = willBeOpen
+    DropdownBtn.Text = currentMode .. (willBeOpen and "  ▼" or "  ►")
+end)
+
+-- Loop Option
+for i, modeName in ipairs(modes) do
+    local OptionBtn = Instance.new("TextButton")
+    OptionBtn.Size = UDim2.new(1, 0, 0, 26)
+    OptionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+    OptionBtn.BackgroundTransparency = 0.1
+    OptionBtn.Text = modeName
+    OptionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    OptionBtn.Font = Enum.Font.SourceSans
+    OptionBtn.TextSize = 12
+    OptionBtn.LayoutOrder = i
+    OptionBtn.ZIndex = 101
+    OptionBtn.Parent = DropdownList
+
+    OptionBtn.MouseButton1Click:Connect(function()
+        currentMode = modeName
+        DropdownBtn.Text = currentMode .. "  ►"
+        DropdownList.Visible = false
+        
+        if RefreshList then
+            RefreshList()
+        end
+    end)
+end
 
 -- Scroll Frame
 local ScrollFrame = Instance.new("ScrollingFrame")
