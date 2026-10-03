@@ -6,19 +6,26 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
 local TargetParent = CoreGui
-
 if TargetParent:FindFirstChild("ServerFinderGui") then
     TargetParent.ServerFinderGui:Destroy()
 end
 
--- ScreenGui Main
+local currentMode = "Least Player"
+local modes = {"Least Player", "Low Ping", "New Server"}
+local validServersList = {}
+local visitedServers = {}
+local statusTimer = nil
+local isMinimized = false
+local isRefreshing = false
+local FETCH_COOLDOWN = 3
+local lastFetchTime = 0
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ServerFinderGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = TargetParent
 
--- Dark Overlay
 local OverlayFrame = Instance.new("Frame")
 OverlayFrame.Name = "OverlayFrame"
 OverlayFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -30,7 +37,6 @@ OverlayFrame.Visible = false
 OverlayFrame.ZIndex = 1000
 OverlayFrame.Parent = ScreenGui
 
--- Dialog Frame
 local DialogFrame = Instance.new("Frame")
 DialogFrame.Name = "ConfirmDialog"
 DialogFrame.Size = UDim2.new(0, 270, 0, 135)
@@ -92,7 +98,6 @@ local NoCorner = Instance.new("UICorner")
 NoCorner.CornerRadius = UDim.new(0, 5)
 NoCorner.Parent = NoBtn
 
--- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 380, 0, 310)
@@ -114,7 +119,6 @@ MainStroke.Color = Color3.fromRGB(45, 45, 58)
 MainStroke.Thickness = 1
 MainStroke.Parent = MainFrame
 
--- Header Frame
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 42)
 Header.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
@@ -164,7 +168,6 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 4)
 ToggleCorner.Parent = ToggleBtn
 
--- Refresh Button
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Size = UDim2.new(0, 75, 0, 26)
 RefreshBtn.Position = UDim2.new(1, -138, 0.5, -13)
@@ -193,7 +196,6 @@ local AutoHopCorner = Instance.new("UICorner")
 AutoHopCorner.CornerRadius = UDim.new(0, 5)
 AutoHopCorner.Parent = AutoHopBtn
 
--- Content Frame Container
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Name = "ContentFrame"
 ContentFrame.Size = UDim2.new(1, 0, 1, -42)
@@ -201,23 +203,6 @@ ContentFrame.Position = UDim2.new(0, 0, 0, 42)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
--- State Variables
-local currentMode = "Least Player"
-local modes = {"Least Player", "Low Ping", "New Server"}
-local validServersList = {}
-local serverCards = {}
-local visitedServers = {}
-local statusTimer = nil
-local isMinimized = false
-local isRefreshing = false
-local FETCH_COOLDOWN = 3
-local lastFetchTime = 0
-
--- Function declarations (Forward declaration)
-local RenderServers
-local RefreshList
-
--- Mode Frame Container
 local ModeFrame = Instance.new("Frame")
 ModeFrame.Name = "ModeFrame"
 ModeFrame.Size = UDim2.new(1, -16, 0, 26)
@@ -270,7 +255,6 @@ local ListLayout = Instance.new("UIListLayout")
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ListLayout.Parent = DropdownList
 
--- Scroll Frame
 local ScrollFrame = Instance.new("ScrollingFrame")
 ScrollFrame.Size = UDim2.new(1, -16, 1, -44)
 ScrollFrame.Position = UDim2.new(0, 8, 0, 38)
@@ -279,73 +263,6 @@ ScrollFrame.BorderSizePixel = 0
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.Parent = ContentFrame
-
--- Toggle Dropdown Event
-DropdownBtn.MouseButton1Click:Connect(function()
-    local willBeOpen = not DropdownList.Visible
-    DropdownList.Visible = willBeOpen
-    DropdownBtn.Text = currentMode .. (willBeOpen and "  ▼" or "  ►")
-end)
-
-local function SortServers(servers)
-    if not servers then return {} end
-    if currentMode == "Least Player" then
-        table.sort(servers, function(a, b)
-            return (a.playing or 0) < (b.playing or 0)
-        end)
-    elseif currentMode == "Low Ping" then
-        table.sort(servers, function(a, b)
-            local pingA = a.ping or 9999
-            local pingB = b.ping or 9999
-            if pingA == pingB then
-                return (a.playing or 0) < (b.playing or 0)
-            end
-            return pingA < pingB
-        end)
-    elseif currentMode == "New Server" then
-        table.sort(servers, function(a, b)
-            local playingA = a.playing or 0
-            local playingB = b.playing or 0
-            local pingA = a.ping or 9999
-            local pingB = b.ping or 9999
-            if playingA == playingB then
-                return pingA < pingB
-            end
-            return playingA < playingB
-        end)
-    end
-    return servers
-end
-
--- Loop Options Dropdown
-for i, modeName in ipairs(modes) do
-    local OptionBtn = Instance.new("TextButton")
-    OptionBtn.Size = UDim2.new(1, 0, 0, 26)
-    OptionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-    OptionBtn.BackgroundTransparency = 0.1
-    OptionBtn.Text = modeName
-    OptionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-    OptionBtn.Font = Enum.Font.SourceSans
-    OptionBtn.TextSize = 12
-    OptionBtn.LayoutOrder = i
-    OptionBtn.ZIndex = 201
-    OptionBtn.Parent = DropdownList
-
-    OptionBtn.MouseButton1Click:Connect(function()
-        currentMode = modeName
-        DropdownBtn.Text = currentMode .. "  ►"
-        DropdownList.Visible = false
-        
-        if validServersList and #validServersList > 0 then
-            SortServers(validServersList)
-            if RenderServers then
-                RenderServers(validServersList)
-            end
-        elseif RefreshList then
-            RefreshList()
-        end
-    end)
-end
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -356,7 +273,6 @@ UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 6)
 end)
 
--- Status Label
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 0, 40)
 StatusLabel.Position = UDim2.new(0, 0, 0, 10)
@@ -392,43 +308,138 @@ local function Notify(title, message, duration)
     end)
 end
 
-CloseBtn.MouseButton1Click:Connect(function()
-    OverlayFrame.Visible = true
-end)
-
-YesBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
-NoBtn.MouseButton1Click:Connect(function()
-    OverlayFrame.Visible = false
-end)
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    ContentFrame.Visible = not isMinimized
-    DropdownList.Visible = false
-    
-    if isMinimized then
-        MainFrame.Size = UDim2.new(0, 380, 0, 42)
-        MainFrame.Position = UDim2.new(
-            MainFrame.Position.X.Scale, 
-            MainFrame.Position.X.Offset, 
-            MainFrame.Position.Y.Scale, 
-            MainFrame.Position.Y.Offset - 134
-        )
-        ToggleBtn.Text = "+"
-    else
-        MainFrame.Size = UDim2.new(0, 380, 0, 310)
-        MainFrame.Position = UDim2.new(
-            MainFrame.Position.X.Scale, 
-            MainFrame.Position.X.Offset, 
-            MainFrame.Position.Y.Scale, 
-            MainFrame.Position.Y.Offset + 134
-        )
-        ToggleBtn.Text = "-"
+local function SortServers(servers)
+    if not servers then return {} end
+    if currentMode == "Least Player" then
+        table.sort(servers, function(a, b)
+            return (a.playing or 0) < (b.playing or 0)
+        end)
+    elseif currentMode == "Low Ping" then
+        table.sort(servers, function(a, b)
+            local pingA = a.ping or 9999
+            local pingB = b.ping or 9999
+            if pingA == pingB then
+                return (a.playing or 0) < (b.playing or 0)
+            end
+            return pingA < pingB
+        end)
+    elseif currentMode == "New Server" then
+        table.sort(servers, function(a, b)
+            local playingA = a.playing or 0
+            local playingB = b.playing or 0
+            local pingA = a.ping or 9999
+            local pingB = b.ping or 9999
+            if playingA == playingB then
+                return pingA < pingB
+            end
+            return playingA < playingB
+        end)
     end
-end)
+    return servers
+end
+
+local function JoinServer(serverId, joinBtn)
+    if visitedServers[serverId] then return end
+    visitedServers[serverId] = true
+
+    if joinBtn then
+        joinBtn.Text = "Joining..."
+        joinBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+    end
+
+    Notify("Server Finder", "Teleporting to server...", 3)
+
+    task.delay(6, function()
+        if joinBtn and joinBtn.Parent and joinBtn.Text == "Joining..." then
+            joinBtn.Text = "Join"
+            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        end
+    end)
+
+    local tpSuccess = pcall(function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, LocalPlayer)
+    end)
+
+    if not tpSuccess then
+        if joinBtn and joinBtn.Parent then
+            joinBtn.Text = "Join"
+            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        end
+        Notify("Teleport Error", "Failed to initiate teleport. Try another.", 2)
+    end
+end
+
+local function RenderServers(servers)
+    for _, child in pairs(ScrollFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    if #servers == 0 then
+        Notify("Server Finder", "No available servers found. Tap Refresh to try again.", 3)
+        return
+    end
+
+    StatusLabel.Visible = false
+
+    for index, server in ipairs(servers) do
+        local playing = server.playing or server.players or 0
+        local maxPlayers = server.maxPlayers or 12
+
+        local ItemFrame = Instance.new("Frame")
+        ItemFrame.Name = server.id
+        ItemFrame.Size = UDim2.new(1, -4, 0, 42)
+        ItemFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+        ItemFrame.BorderSizePixel = 0
+        ItemFrame.LayoutOrder = index
+        ItemFrame.Parent = ScrollFrame
+
+        local ItemCorner = Instance.new("UICorner")
+        ItemCorner.CornerRadius = UDim.new(0, 6)
+        ItemCorner.Parent = ItemFrame
+
+        local InfoLabel = Instance.new("TextLabel")
+        InfoLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+        InfoLabel.Position = UDim2.new(0, 8, 0, 3)
+        InfoLabel.BackgroundTransparency = 1
+        InfoLabel.Text = "Players: " .. tostring(playing) .. "/" .. tostring(maxPlayers)
+        InfoLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
+        InfoLabel.Font = Enum.Font.SourceSansBold
+        InfoLabel.TextSize = 13
+        InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+        InfoLabel.Parent = ItemFrame
+
+        local PingLabel = Instance.new("TextLabel")
+        PingLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+        PingLabel.Position = UDim2.new(0, 8, 0.5, -2)
+        PingLabel.BackgroundTransparency = 1
+        PingLabel.Text = "Ping: " .. (server.ping and tostring(server.ping) .. " ms" or "N/A")
+        PingLabel.TextColor3 = Color3.fromRGB(140, 140, 150)
+        PingLabel.Font = Enum.Font.SourceSans
+        PingLabel.TextSize = 11
+        PingLabel.TextXAlignment = Enum.TextXAlignment.Left
+        PingLabel.Parent = ItemFrame
+
+        local JoinBtn = Instance.new("TextButton")
+        JoinBtn.Size = UDim2.new(0, 60, 0, 24)
+        JoinBtn.Position = UDim2.new(1, -68, 0.5, -12)
+        JoinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        JoinBtn.Text = "Join"
+        JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        JoinBtn.Font = Enum.Font.SourceSansBold
+        JoinBtn.TextSize = 12
+        JoinBtn.Parent = ItemFrame
+
+        local JoinCorner = Instance.new("UICorner")
+        JoinCorner.CornerRadius = UDim.new(0, 4)
+        JoinCorner.Parent = JoinBtn
+
+        JoinBtn.MouseButton1Click:Connect(function()
+            JoinServer(server.id, JoinBtn)
+        end)
+    end
+end
 
 local function CustomRequest(url)
     local bodyText = nil
@@ -497,7 +508,6 @@ local function GetProcessedServers(maxPages)
         for _, s in ipairs(response.data) do
             local playingCount = s.playing or s.players or 0
             local maxCapacity = s.maxPlayers or 12
-            
             local safeMaxPlayers = math.max(1, maxCapacity - 2)
             
             if playingCount >= 1 and playingCount <= safeMaxPlayers and s.id ~= game.JobId and not visitedServers[s.id] then
@@ -512,112 +522,6 @@ local function GetProcessedServers(maxPages)
     return SortServers(result)
 end
 
-local function JoinServer(serverId, joinBtn, frame)
-    if visitedServers[serverId] then return end
-    visitedServers[serverId] = true
-
-    if joinBtn then
-        joinBtn.Text = "Joining..."
-        joinBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-    end
-
-    Notify("Server Finder", "Teleporting to server...", 3)
-
-    task.delay(6, function()
-        if joinBtn and joinBtn.Parent and joinBtn.Text == "Joining..." then
-            joinBtn.Text = "Join"
-            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        end
-    end)
-
-    local tpSuccess, tpErr = pcall(function()
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, serverId, LocalPlayer)
-    end)
-
-    if not tpSuccess then
-        if joinBtn and joinBtn.Parent then
-            joinBtn.Text = "Join"
-            joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        end
-        Notify("Teleport Error", "Failed to initiate teleport. Try another.", 2)
-    end
-end
-
-local function RenderServers(servers)
-    for _, child in pairs(ScrollFrame:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
-    serverCards = {}
-
-    if #servers == 0 then
-        Notify("Server Finder", "No available servers found. Tap Refresh to try again.", 3)
-        return
-    end
-
-    StatusLabel.Visible = false
-
-    for index, server in ipairs(servers) do
-        local playing = server.playing or server.players or 0
-        local maxPlayers = server.maxPlayers or 12
-
-        local ItemFrame = Instance.new("Frame")
-        ItemFrame.Name = server.id
-        ItemFrame.Size = UDim2.new(1, -4, 0, 42)
-        ItemFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
-        ItemFrame.BorderSizePixel = 0
-        ItemFrame.LayoutOrder = index
-        ItemFrame.Parent = ScrollFrame
-
-        local ItemCorner = Instance.new("UICorner")
-        ItemCorner.CornerRadius = UDim.new(0, 6)
-        ItemCorner.Parent = ItemFrame
-
-        local InfoLabel = Instance.new("TextLabel")
-        InfoLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
-        InfoLabel.Position = UDim2.new(0, 8, 0, 3)
-        InfoLabel.BackgroundTransparency = 1
-        InfoLabel.Text = "Players: " .. tostring(playing) .. "/" .. tostring(maxPlayers)
-        InfoLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
-        InfoLabel.Font = Enum.Font.SourceSansBold
-        InfoLabel.TextSize = 13
-        InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-        InfoLabel.Parent = ItemFrame
-
-        local PingLabel = Instance.new("TextLabel")
-        PingLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
-        PingLabel.Position = UDim2.new(0, 8, 0.5, -2)
-        PingLabel.BackgroundTransparency = 1
-        PingLabel.Text = "Ping: " .. (server.ping and tostring(server.ping) .. " ms" or "N/A")
-        PingLabel.TextColor3 = Color3.fromRGB(140, 140, 150)
-        PingLabel.Font = Enum.Font.SourceSans
-        PingLabel.TextSize = 11
-        PingLabel.TextXAlignment = Enum.TextXAlignment.Left
-        PingLabel.Parent = ItemFrame
-
-        local JoinBtn = Instance.new("TextButton")
-        JoinBtn.Size = UDim2.new(0, 60, 0, 24)
-        JoinBtn.Position = UDim2.new(1, -68, 0.5, -12)
-        JoinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        JoinBtn.Text = "Join"
-        JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        JoinBtn.Font = Enum.Font.SourceSansBold
-        JoinBtn.TextSize = 12
-        JoinBtn.Parent = ItemFrame
-
-        local JoinCorner = Instance.new("UICorner")
-        JoinCorner.CornerRadius = UDim.new(0, 4)
-        JoinCorner.Parent = JoinBtn
-
-        serverCards[server.id] = ItemFrame
-
-        JoinBtn.MouseButton1Click:Connect(function()
-            JoinServer(server.id, JoinBtn, ItemFrame)
-        end)
-    end
-end
-
 local function RefreshList()
     if isRefreshing then return end
     
@@ -627,14 +531,14 @@ local function RefreshList()
     isRefreshing = true
     lastFetchTime = tick()
     RefreshBtn.Text = "Scanning..."
-    Notify("Server Finder", "Fast scanning 6 pages (~600 servers)...", 2)
+    Notify("Server Finder", "Fast scanning servers...", 2)
 
     task.spawn(function()
         validServersList = GetProcessedServers(6)
         RenderServers(validServersList)
         
         if #validServersList > 0 then
-            Notify("Server Finder", "Found " .. tostring(#validServersList) .. " low-player servers!", 2)
+            Notify("Server Finder", "Found " .. tostring(#validServersList) .. " servers!", 2)
         end
 
         for i = FETCH_COOLDOWN, 1, -1 do
@@ -648,17 +552,88 @@ local function RefreshList()
 end
 
 local function AutoHop()
-    Notify("Auto Hop", "Searching lowest player server...", 2)
+    Notify("Auto Hop", "Searching best server for: " .. currentMode, 2)
     task.spawn(function()
         local servers = GetProcessedServers(6)
         if #servers > 0 then
             local targetServer = servers[1]
             JoinServer(targetServer.id)
         else
-            Notify("Auto Hop", "No low player server found.", 3)
+            Notify("Auto Hop", "No suitable server found.", 3)
         end
     end)
 end
+
+DropdownBtn.MouseButton1Click:Connect(function()
+    local willBeOpen = not DropdownList.Visible
+    DropdownList.Visible = willBeOpen
+    DropdownBtn.Text = currentMode .. (willBeOpen and "  ▼" or "  ►")
+end)
+
+for i, modeName in ipairs(modes) do
+    local OptionBtn = Instance.new("TextButton")
+    OptionBtn.Size = UDim2.new(1, 0, 0, 26)
+    OptionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+    OptionBtn.BackgroundTransparency = 0.1
+    OptionBtn.Text = modeName
+    OptionBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    OptionBtn.Font = Enum.Font.SourceSans
+    OptionBtn.TextSize = 12
+    OptionBtn.LayoutOrder = i
+    OptionBtn.ZIndex = 201
+    OptionBtn.Parent = DropdownList
+
+    OptionBtn.MouseButton1Click:Connect(function()
+        currentMode = modeName
+        DropdownBtn.Text = currentMode .. "  ►"
+        DropdownList.Visible = false
+        
+        if validServersList and #validServersList > 0 then
+            SortServers(validServersList)
+            RenderServers(validServersList)
+        else
+            RefreshList()
+        end
+    end)
+end
+
+CloseBtn.MouseButton1Click:Connect(function()
+    OverlayFrame.Visible = true
+end)
+
+YesBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+NoBtn.MouseButton1Click:Connect(function()
+    OverlayFrame.Visible = false
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    ContentFrame.Visible = not isMinimized
+    DropdownList.Visible = false
+    
+    if isMinimized then
+        MainFrame.Size = UDim2.new(0, 380, 0, 42)
+        MainFrame.Position = UDim2.new(
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset - 134
+        )
+        ToggleBtn.Text = "+"
+    else
+        MainFrame.Size = UDim2.new(0, 380, 0, 310)
+        MainFrame.Position = UDim2.new(
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset + 134
+        )
+        ToggleBtn.Text = "-"
+    end
+end)
 
 RefreshBtn.MouseButton1Click:Connect(RefreshList)
 AutoHopBtn.MouseButton1Click:Connect(AutoHop)
