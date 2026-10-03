@@ -201,9 +201,21 @@ ContentFrame.Position = UDim2.new(0, 0, 0, 42)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
--- Hop Server Mode State
+-- State Variables
 local currentMode = "Least Player"
 local modes = {"Least Player", "Low Ping", "New Server"}
+local validServersList = {}
+local serverCards = {}
+local visitedServers = {}
+local statusTimer = nil
+local isMinimized = false
+local isRefreshing = false
+local FETCH_COOLDOWN = 3
+local lastFetchTime = 0
+
+-- Function declarations (Forward declaration)
+local RenderServers
+local RefreshList
 
 -- Mode Frame Container
 local ModeFrame = Instance.new("Frame")
@@ -276,6 +288,7 @@ DropdownBtn.MouseButton1Click:Connect(function()
 end)
 
 local function SortServers(servers)
+    if not servers then return {} end
     if currentMode == "Least Player" then
         table.sort(servers, function(a, b)
             return (a.playing or 0) < (b.playing or 0)
@@ -323,9 +336,11 @@ for i, modeName in ipairs(modes) do
         DropdownBtn.Text = currentMode .. "  ►"
         DropdownList.Visible = false
         
-        if #validServersList > 0 then
+        if validServersList and #validServersList > 0 then
             SortServers(validServersList)
-            RenderServers(validServersList)
+            if RenderServers then
+                RenderServers(validServersList)
+            end
         elseif RefreshList then
             RefreshList()
         end
@@ -351,16 +366,6 @@ StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 StatusLabel.Font = Enum.Font.SourceSans
 StatusLabel.TextSize = 13
 StatusLabel.Parent = ScrollFrame
-
-local serverCards = {}
-local validServersList = {}
-local visitedServers = {}
-local statusTimer = nil
-local isMinimized = false
-local isRefreshing = false
-
-local FETCH_COOLDOWN = 3
-local lastFetchTime = 0
 
 local function Notify(title, message, duration)
     duration = duration or 3
