@@ -378,24 +378,13 @@ end)
 ToggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     ContentFrame.Visible = not isMinimized
+    DropdownList.Visible = false
     
     if isMinimized then
         MainFrame.Size = UDim2.new(0, 380, 0, 42)
-        MainFrame.Position = UDim2.new(
-            MainFrame.Position.X.Scale, 
-            MainFrame.Position.X.Offset, 
-            MainFrame.Position.Y.Scale, 
-            MainFrame.Position.Y.Offset - 134
-        )
         ToggleBtn.Text = "+"
     else
         MainFrame.Size = UDim2.new(0, 380, 0, 310)
-        MainFrame.Position = UDim2.new(
-            MainFrame.Position.X.Scale, 
-            MainFrame.Position.X.Offset, 
-            MainFrame.Position.Y.Scale, 
-            MainFrame.Position.Y.Offset + 134
-        )
         ToggleBtn.Text = "-"
     end
 end)
