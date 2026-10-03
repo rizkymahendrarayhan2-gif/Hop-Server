@@ -209,7 +209,7 @@ local modes = {"Least Player", "Low Ping", "New Server"}
 local ModeFrame = Instance.new("Frame")
 ModeFrame.Name = "ModeFrame"
 ModeFrame.Size = UDim2.new(1, -16, 0, 26)
-ModeFrame.Position = UDim2.new(0, 8, 0, 4)
+ModeFrame.Position = UDim2.new(0, 8, 0, 6)
 ModeFrame.BackgroundTransparency = 1
 ModeFrame.ZIndex = 10
 ModeFrame.Parent = ContentFrame
@@ -247,7 +247,7 @@ DropdownList.Position = UDim2.new(0, 115, 1, 4)
 DropdownList.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
 DropdownList.BorderSizePixel = 0
 DropdownList.Visible = false
-DropdownList.ZIndex = 100
+DropdownList.ZIndex = 200
 DropdownList.Parent = ModeFrame
 
 local ListCorner = Instance.new("UICorner")
@@ -258,22 +258,53 @@ local ListLayout = Instance.new("UIListLayout")
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ListLayout.Parent = DropdownList
 
+-- Scroll Frame
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -16, 1, -38)
-ScrollFrame.Position = UDim2.new(0, 8, 0, 34)
+ScrollFrame.Size = UDim2.new(1, -16, 1, -44)
+ScrollFrame.Position = UDim2.new(0, 8, 0, 38)
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.Parent = ContentFrame
 
+-- Toggle Dropdown Event
 DropdownBtn.MouseButton1Click:Connect(function()
     local willBeOpen = not DropdownList.Visible
     DropdownList.Visible = willBeOpen
     DropdownBtn.Text = currentMode .. (willBeOpen and "  ▼" or "  ►")
 end)
 
--- Loop Option
+local function SortServers(servers)
+    if currentMode == "Least Player" then
+        table.sort(servers, function(a, b)
+            return (a.playing or 0) < (b.playing or 0)
+        end)
+    elseif currentMode == "Low Ping" then
+        table.sort(servers, function(a, b)
+            local pingA = a.ping or 9999
+            local pingB = b.ping or 9999
+            if pingA == pingB then
+                return (a.playing or 0) < (b.playing or 0)
+            end
+            return pingA < pingB
+        end)
+    elseif currentMode == "New Server" then
+        table.sort(servers, function(a, b)
+            local playingA = a.playing or 0
+            local playingB = b.playing or 0
+            local pingA = a.ping or 9999
+            local pingB = b.ping or 9999
+            if playingA == playingB then
+                return pingA < pingB
+            end
+            return playingA < playingB
+        end)
+    end
+    return servers
+end
+
+-- Loop Options Dropdown
 for i, modeName in ipairs(modes) do
     local OptionBtn = Instance.new("TextButton")
     OptionBtn.Size = UDim2.new(1, 0, 0, 26)
@@ -284,7 +315,7 @@ for i, modeName in ipairs(modes) do
     OptionBtn.Font = Enum.Font.SourceSans
     OptionBtn.TextSize = 12
     OptionBtn.LayoutOrder = i
-    OptionBtn.ZIndex = 101
+    OptionBtn.ZIndex = 201
     OptionBtn.Parent = DropdownList
 
     OptionBtn.MouseButton1Click:Connect(function()
@@ -292,21 +323,14 @@ for i, modeName in ipairs(modes) do
         DropdownBtn.Text = currentMode .. "  ►"
         DropdownList.Visible = false
         
-        if RefreshList then
+        if #validServersList > 0 then
+            SortServers(validServersList)
+            RenderServers(validServersList)
+        elseif RefreshList then
             RefreshList()
         end
     end)
 end
-
--- Scroll Frame
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, -16, 1, -12)
-ScrollFrame.Position = UDim2.new(0, 8, 0, 6)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollFrame.ScrollBarThickness = 4
-ScrollFrame.Parent = ContentFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -382,9 +406,21 @@ ToggleBtn.MouseButton1Click:Connect(function()
     
     if isMinimized then
         MainFrame.Size = UDim2.new(0, 380, 0, 42)
+        MainFrame.Position = UDim2.new(
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset - 134
+        )
         ToggleBtn.Text = "+"
     else
         MainFrame.Size = UDim2.new(0, 380, 0, 310)
+        MainFrame.Position = UDim2.new(
+            MainFrame.Position.X.Scale, 
+            MainFrame.Position.X.Offset, 
+            MainFrame.Position.Y.Scale, 
+            MainFrame.Position.Y.Offset + 134
+        )
         ToggleBtn.Text = "-"
     end
 end)
@@ -468,33 +504,7 @@ local function GetProcessedServers(maxPages)
         if not cursor or cursor == "" then break end
     end
 
-    if currentMode == "Least Player" then
-        table.sort(result, function(a, b)
-            return (a.playing or 0) < (b.playing or 0)
-        end)
-    elseif currentMode == "Low Ping" then
-        table.sort(result, function(a, b)
-            local pingA = a.ping or 9999
-            local pingB = b.ping or 9999
-            if pingA == pingB then
-                return (a.playing or 0) < (b.playing or 0)
-            end
-            return pingA < pingB
-        end)
-    elseif currentMode == "New Server" then
-        table.sort(result, function(a, b)
-            local playingA = a.playing or 0
-            local playingB = b.playing or 0
-            local pingA = a.ping or 9999
-            local pingB = b.ping or 9999
-            if playingA == playingB then
-                return pingA < pingB
-            end
-            return playingA < playingB
-        end)
-    end
-
-    return result
+    return SortServers(result)
 end
 
 local function JoinServer(serverId, joinBtn, frame)
