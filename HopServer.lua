@@ -60,7 +60,7 @@ local DialogTitle = Instance.new("TextLabel")
 DialogTitle.Size = UDim2.new(1, -20, 0, 50)
 DialogTitle.Position = UDim2.new(0, 10, 0, 10)
 DialogTitle.BackgroundTransparency = 1
-DialogTitle.Text = "Are you sure you want to unload the script?"
+DialogTitle.Text = "Are you sure want to unload the script?"
 DialogTitle.TextColor3 = Color3.fromRGB(240, 240, 240)
 DialogTitle.TextSize = 13
 DialogTitle.Font = Enum.Font.SourceSansBold
@@ -349,7 +349,7 @@ local function JoinServer(serverId, joinBtn)
 
     Notify("Server Finder", "Teleporting to server...", 3)
 
-    task.delay(6, function()
+    task.delay(3.5, function()
         if joinBtn and joinBtn.Parent and joinBtn.Text == "Joining..." then
             joinBtn.Text = "Join"
             joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -561,7 +561,7 @@ local function RefreshList()
     isRefreshing = true
     lastFetchTime = tick()
     RefreshBtn.Text = "Scanning..."
-    Notify("Server Finder", "Fast scanning servers...", 2)
+    Notify("Server Finder", "Scanning servers...", 2)
 
     task.spawn(function()
         validServersList = GetProcessedServers(10)
