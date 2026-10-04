@@ -497,7 +497,7 @@ local function FetchServersPage(cursor)
 end
 
 local function GetProcessedServers(maxPages)
-    maxPages = maxPages or 6
+    maxPages = maxPages or 10
     local result = {}
     local cursor = nil
 
@@ -508,7 +508,16 @@ local function GetProcessedServers(maxPages)
         for _, s in ipairs(response.data) do
             local playingCount = s.playing or s.players or 0
             local maxCapacity = s.maxPlayers or 12
-            local safeMaxPlayers = math.max(1, maxCapacity - 2)
+            
+            -- AUTO DETECT LIMIT
+            local safeMaxPlayers
+            if maxCapacity <= 8 then
+                safeMaxPlayers = maxCapacity - 1
+            elseif maxCapacity <= 20 then
+                safeMaxPlayers = maxCapacity - 2
+            else
+                safeMaxPlayers = math.floor(maxCapacity * 0.85)
+            end
             
             if playingCount >= 1 and playingCount <= safeMaxPlayers and s.id ~= game.JobId and not visitedServers[s.id] then
                 table.insert(result, s)
@@ -517,6 +526,27 @@ local function GetProcessedServers(maxPages)
 
         cursor = response.nextPageCursor
         if not cursor or cursor == "" then break end
+    end
+
+    -- PLAN B (FALLBACK)
+    if #result == 0 then
+        cursor = nil
+        for page = 1, 5 do
+            local response = FetchServersPage(cursor)
+            if not response or not response.data then break end
+
+            for _, s in ipairs(response.data) do
+                local playingCount = s.playing or s.players or 0
+                local maxCapacity = s.maxPlayers or 12
+
+                if playingCount >= 1 and playingCount < maxCapacity and s.id ~= game.JobId and not visitedServers[s.id] then
+                    table.insert(result, s)
+                end
+            end
+
+            cursor = response.nextPageCursor
+            if not cursor or cursor == "" then break end
+        end
     end
 
     return SortServers(result)
@@ -534,7 +564,7 @@ local function RefreshList()
     Notify("Server Finder", "Fast scanning servers...", 2)
 
     task.spawn(function()
-        validServersList = GetProcessedServers(6)
+        validServersList = GetProcessedServers(10)
         RenderServers(validServersList)
         
         if #validServersList > 0 then
@@ -554,7 +584,7 @@ end
 local function AutoHop()
     Notify("Auto Hop", "Searching best server for: " .. currentMode, 2)
     task.spawn(function()
-        local servers = GetProcessedServers(6)
+        local servers = GetProcessedServers(10)
         if #servers > 0 then
             local targetServer = servers[1]
             JoinServer(targetServer.id)
