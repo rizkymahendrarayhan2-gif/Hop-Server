@@ -586,7 +586,9 @@ local function AutoHop()
     task.spawn(function()
         local servers = GetProcessedServers(10)
         if #servers > 0 then
-            local targetServer = servers[1]
+            -- CHOOSE RANDOMLY
+            local safeIndex = math.min(#servers, math.random(2, 3))
+            local targetServer = servers[safeIndex] or servers[1]
             JoinServer(targetServer.id)
         else
             Notify("Auto Hop", "No suitable server found.", 3)
